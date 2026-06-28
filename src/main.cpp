@@ -13,13 +13,8 @@
 // Forward declaration for signal handler
 #include <optional>
 
-static App *g_app = nullptr;
-
-static App *g_app = nullptr;
-
-// Application state including UI selections
 struct App {
-    notcurses_t *nc;
+    notcurses *nc;
     enum class Screen {
         MAIN_MENU,
         MODEL_LIST,
@@ -42,56 +37,66 @@ struct App {
     int contextSize = 4096;
 };
 
+static App *g_app = nullptr;
+
+
+
 static void render_main_menu(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
-    ncplane_printf_at(stdp, 1, 2, "Launch‑Llama: Select binary\n");
+    ncplane_printf_yx(stdp, 1, 2, "Launch‑Llama: Select binary\n");
     const char *sel = (app->binary == "llama-swap") ? "> " : "  ";
-    ncplane_printf_at(stdp, 3, 4, "%s1) llama‑swap", sel);
+    ncplane_printf_yx(stdp, 3, 4, "%s1) llama‑swap", sel);
     sel = (app->binary == "llama-server") ? "> " : "  ";
-    ncplane_printf_at(stdp, 4, 4, "%s2) llama‑server", sel);
-    ncplane_printf_at(stdp, 6, 2, "Press Enter to continue, 'q' to quit.");
+    ncplane_printf_yx(stdp, 4, 4, "%s2) llama‑server", sel);
+    ncplane_printf_yx(stdp, 6, 2, "Press Enter to continue, 'q' to quit.");
 }
+
 
 static void render_model_list(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
-    ncplane_printf_at(stdp, 1, 2, "Model List:\n");
+    ncplane_printf_yx(stdp, 1, 2, "Model List:\n");
     int y = 3;
     for (size_t i = 0; i < app->models.size(); ++i) {
         const char *prefix = (int)i == app->selectedModelIdx ? "> " : "  ";
-        ncplane_printf_at(stdp, y++, 4, "%s%s", prefix, app->models[i].c_str());
+        ncplane_printf_yx(stdp, y++, 4, "%s%s", prefix, app->models[i].c_str());
     }
-    ncplane_printf_at(stdp, y+1, 2, "Press Enter to proceed.");
+    ncplane_printf_yx(stdp, y+1, 2, "Press Enter to proceed.");
 }
+
 
 static void render_kv_quant(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
     const char *kvTypes[9] = {"f32","f16","bf16","q8_0","q4_0","q4_1","iq4_nl","q5_0","q5_1"};
-    ncplane_printf_at(stdp, 1, 2, "KV Quantization:\n");
-    ncplane_printf_at(stdp, 3, 4, "Key: %s", kvTypes[app->kvKeyIdx]);
-    ncplane_printf_at(stdp, 4, 4, "Value: %s", kvTypes[app->kvValueIdx]);
-    ncplane_printf_at(stdp, 6, 2, "Use Left/Right to change, Enter to proceed.");
+    ncplane_printf_yx(stdp, 1, 2, "KV Quantization:\n");
+    ncplane_printf_yx(stdp, 3, 4, "Key: %s", kvTypes[app->kvKeyIdx]);
+    ncplane_printf_yx(stdp, 4, 4, "Value: %s", kvTypes[app->kvValueIdx]);
+    ncplane_printf_yx(stdp, 6, 2, "Use Left/Right to change, Enter to proceed.");
 }
+
 
 static void render_gpu_layers(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
-    ncplane_printf_at(stdp, 1, 2, "GPU Layers:\n");
-    ncplane_printf_at(stdp, 3, 4, "Layers: %d (0-40)", app->gpuLayers);
-    ncplane_printf_at(stdp, 5, 2, "Use Up/Down to adjust, Enter to proceed.");
+    ncplane_printf_yx(stdp, 1, 2, "GPU Layers:\n");
+    ncplane_printf_yx(stdp, 3, 4, "Layers: %d (0-40)", app->gpuLayers);
+    ncplane_printf_yx(stdp, 5, 2, "Use Up/Down to adjust, Enter to proceed.");
 }
+
 
 static void render_agent_mode(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
-    ncplane_printf_at(stdp, 1, 2, "Agent Mode:\n");
-    ncplane_printf_at(stdp, 3, 4, "Mode: %s", app->agentMode ? "Enabled" : "Disabled");
-    ncplane_printf_at(stdp, 5, 2, "Use Left/Right to toggle, Enter to proceed.");
+    ncplane_printf_yx(stdp, 1, 2, "Agent Mode:\n");
+    ncplane_printf_yx(stdp, 3, 4, "Mode: %s", app->agentMode ? "Enabled" : "Disabled");
+    ncplane_printf_yx(stdp, 5, 2, "Use Left/Right to toggle, Enter to proceed.");
 }
+
 
 static void render_run_cmd(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
-    ncplane_printf_at(stdp, 1, 2, "Run Command:\n");
-    ncplane_printf_at(stdp, 3, 4, "(This is a placeholder for the actual command output)");
-    ncplane_printf_at(stdp, 5, 2, "Press 'q' to exit.");
+    ncplane_printf_yx(stdp, 1, 2, "Run Command:\n");
+    ncplane_printf_yx(stdp, 3, 4, "(This is a placeholder for the actual command output)");
+    ncplane_printf_yx(stdp, 5, 2, "Press 'q' to exit.");
 }
+
 
 static void render_screen(App *app) {
     ncplane *stdp = notcurses_stdplane(app->nc);
@@ -108,13 +113,14 @@ static void render_screen(App *app) {
     notcurses_render(app->nc, 0, 0, NULL);
 }
 
+
 static void execCommand(App *app) {
     const char *kvTypes[9] = {"f32","f16","bf16","q8_0","q4_0","q4_1","iq4_nl","q5_0","q5_1"};
     std::string cmd = std::string("./bin/") + app->binary;
     cmd += " --model " + app->models[app->selectedModelIdx];
     cmd += " --context " + std::to_string(app->contextSize);
-    cmd += " --kv-key " + kvTypes[app->kvKeyIdx];
-    cmd += " --kv-value " + kvTypes[app->kvValueIdx];
+    cmd += std::string(" --kv-key ") + kvTypes[app->kvKeyIdx];
+    cmd += std::string(" --kv-value ") + kvTypes[app->kvValueIdx];
     cmd += " --gpu-layers " + std::to_string(app->gpuLayers);
     if (app->binary == "llama-server") {
         cmd += " --port " + std::to_string(app->port);
@@ -124,20 +130,21 @@ static void execCommand(App *app) {
     ncplane_clear(stdp);
     FILE *fp = popen(cmd.c_str(), "r");
     if (!fp) {
-        ncplane_printf_at(stdp, 1, 2, "Failed to execute command: %s", cmd.c_str());
+        ncplane_printf_yx(stdp, 1, 2, "Failed to execute command: %s", cmd.c_str());
         notcurses_render(app->nc, 0, 0, NULL);
         return;
     }
     char buffer[256];
     int y = 3;
     while (fgets(buffer, sizeof(buffer), fp)) {
-        ncplane_printf_at(stdp, y++, 4, "%s", buffer);
+        ncplane_printf_yx(stdp, y++, 4, "%s", buffer);
         notcurses_render(app->nc, 0, 0, NULL);
     }
     pclose(fp);
     // After command finishes, exit application
     app->running = false;
 }
+
 
 static void handle_input(App *app, int ch) {
     using Screen = App::Screen;
@@ -146,41 +153,45 @@ static void handle_input(App *app, int ch) {
             if (ch == 'q' || ch == 'Q') app->running = false;
             else if (ch == '1') app->binary = "llama-swap";
             else if (ch == '2') app->binary = "llama-server";
-            else if (ch == NC_KEY_ENTER || ch == '\n') {
+            else if (ch == NCKEY_ENTER || ch == '\n') {
                 app->current = Screen::MODEL_LIST;
             }
             break;
         case Screen::MODEL_LIST:
-            if (ch == NC_KEY_DOWN) {
+            if (ch == NCKEY_DOWN) {
                 if (app->selectedModelIdx < (int)app->models.size() - 1) app->selectedModelIdx++;
-            } else if (ch == NC_KEY_UP) {
+            } else if (ch == NCKEY_UP) {
                 if (app->selectedModelIdx > 0) app->selectedModelIdx--;
-            } else if (ch == NC_KEY_ENTER || ch == '\n') {
+            }             else if (ch == NCKEY_ENTER || ch == '\n') {
+
                 app->current = Screen::KV_QUANT;
             } else if (ch == 'q' || ch == 'Q') app->running = false;
             break;
         case Screen::KV_QUANT:
-            if (ch == NC_KEY_LEFT) {
+            if (ch == NCKEY_LEFT) {
                 if (app->kvKeyIdx > 0) app->kvKeyIdx--;
-            } else if (ch == NC_KEY_RIGHT) {
+            } else if (ch == NCKEY_RIGHT) {
                 if (app->kvKeyIdx < 8) app->kvKeyIdx++;
-            } else if (ch == NC_KEY_ENTER || ch == '\n') {
+            }             else if (ch == NCKEY_ENTER || ch == '\n') {
+
                 app->current = Screen::GPU_LAYERS;
             } else if (ch == 'q' || ch == 'Q') app->running = false;
             break;
         case Screen::GPU_LAYERS:
-            if (ch == NC_KEY_UP) {
+            if (ch == NCKEY_UP) {
                 if (app->gpuLayers < 40) app->gpuLayers++;
-            } else if (ch == NC_KEY_DOWN) {
+            } else             if (ch == NCKEY_DOWN) {
+
                 if (app->gpuLayers > 0) app->gpuLayers--;
-            } else if (ch == NC_KEY_ENTER || ch == '\n') {
+            }             else if (ch == NCKEY_ENTER || ch == '\n') {
+
                 app->current = Screen::AGENT_MODE;
             } else if (ch == 'q' || ch == 'Q') app->running = false;
             break;
         case Screen::AGENT_MODE:
-            if (ch == NC_KEY_LEFT) app->agentMode = false;
-            else if (ch == NC_KEY_RIGHT) app->agentMode = true;
-            else if (ch == NC_KEY_ENTER || ch == '\n') {
+            if (ch == NCKEY_LEFT) app->agentMode = false;
+            else if (ch == NCKEY_RIGHT) app->agentMode = true;
+            else if (ch == NCKEY_ENTER || ch == '\n') {
                 app->current = Screen::RUN_CMD;
                 execCommand(app);
             } else if (ch == 'q' || ch == 'Q') app->running = false;
@@ -238,7 +249,7 @@ int main(int argc, char *argv[]) {
     }
     struct nc_opts opts = {0};
     opts.flags = NC_OPTION_STDIN;
-    notcurses_t *nc = notcurses_init(&opts, NULL);
+    notcurses *nc = notcurses_init(&opts, NULL);
     if (!nc) {
         std::cerr << "Failed to initialize notcurses." << std::endl;
         return EXIT_FAILURE;
