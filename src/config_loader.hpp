@@ -13,11 +13,14 @@ struct ColorConfig {
 };
 
 struct Favorite {
+    std::string binary;
     std::string model;
+    int context;
     std::string kv_key;
     std::string kv_value;
     int gpu_layers;
     bool agent;
+    int port;
 };
 
 struct Config {
@@ -25,6 +28,6 @@ struct Config {
     std::unordered_map<std::string, Favorite> favorites;
 };
 
-std::optional<Config> loadConfig(const std::string& path);
+std::optional<Config> loadConfig(const std::string& colorsPath, const std::string& favoritesPath);
 
-#endif // CONFIG_LOADER_HPP
+#endif

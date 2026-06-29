@@ -1,0 +1,5 @@
+colors:
+  foreground: "#FFFFFF"
+  background: "#000000"
+  selected: "#FFFF00"
+  highlight: "#00FF00"

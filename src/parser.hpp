@@ -21,4 +21,4 @@ struct Args {
 
 Args parseArgs(int argc, char* argv[]);
 
-#endif // PARSER_HPP
+#endif
