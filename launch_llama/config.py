@@ -13,6 +13,8 @@ models_dir: models
 llama_server_path: llama-server
 llama_swap_path: llama-swap
 llama_swap_config: include/llama-swap-config.yaml
+favorites: favorites.yaml
+default_port_config: include/default.yaml
 """
 
 FAVORITES_TEMPLATE = """# Favorites for launch-llama
@@ -86,10 +88,9 @@ def _ensure_fields(filepath, template):
     return True
 
 
-def generate_defaults(config_path, favorites_path, defaults_path):
-    """Generate default configuration files if they don't exist,
-    and add any missing default fields to existing files."""
-    defaults_dir = os.path.dirname(defaults_path)
+def generate_defaults(config_path):
+    """Ensure config.yaml exists and has all default fields,
+    adding any that are missing."""
     generated = []
 
     if os.path.exists(config_path):
@@ -101,23 +102,6 @@ def generate_defaults(config_path, favorites_path, defaults_path):
             f.write(CONFIG_TEMPLATE)
         generated.append(config_path)
         print(f"Created default config: {config_path}")
-
-    if os.path.exists(favorites_path):
-        pass  # Don't auto-modify user's favorites
-    else:
-        with open(favorites_path, 'w') as f:
-            f.write(FAVORITES_TEMPLATE)
-        generated.append(favorites_path)
-        print(f"Created default favorites: {favorites_path}")
-
-    if not os.path.exists(defaults_dir):
-        os.makedirs(defaults_dir, exist_ok=True)
-
-    if not os.path.exists(defaults_path):
-        with open(defaults_path, 'w') as f:
-            f.write(DEFAULT_YAML_TEMPLATE)
-        generated.append(defaults_path)
-        print(f"Created default: {defaults_path}")
 
     return generated
 
@@ -131,6 +115,8 @@ class Config:
         self.llama_server_path = "llama-server"
         self.llama_swap_path = "llama-swap"
         self.llama_swap_config = "include/llama-swap-config.yaml"
+        self.favorites_path = "favorites.yaml"
+        self.default_port_config_path = "include/default.yaml"
 
     def _validate_port(self, port):
         if not isinstance(port, int):
@@ -160,45 +146,79 @@ class Config:
                 favorites[current][key.strip()] = val.strip()
         return favorites
 
-    def load(self, config_path, favorites_path, defaults_path):
+    def _read_config_yaml(self, config_path):
+        """Read config.yaml and return parsed data dict, or None on failure."""
+        if not os.path.exists(config_path):
+            return None
+        try:
+            with open(config_path, 'r') as f:
+                content = f.read()
+            if HAS_YAML:
+                return yaml.safe_load(content) or {}
+            else:
+                return _parse_yaml_fields(content)
+        except Exception as e:
+            print(f"Warning: Error reading {config_path}: {e}")
+            return None
+
+    def _apply_config_fields(self, data):
+        """Apply config fields from a parsed dict to self."""
+        if HAS_YAML:
+            self.models_dir = data.get("models_dir", self.models_dir)
+            self.llama_server_path = data.get("llama_server_path", self.llama_server_path)
+            self.llama_swap_path = data.get("llama_swap_path", self.llama_swap_path)
+            self.llama_swap_config = data.get("llama_swap_config", self.llama_swap_config)
+            self.favorites_path = data.get("favorites", self.favorites_path)
+            self.default_port_config_path = data.get("default_port_config", self.default_port_config_path)
+            port = data.get("port", self.port)
+        else:
+            self.models_dir = data.get("models_dir", self.models_dir)
+            self.llama_server_path = data.get("llama_server_path", self.llama_server_path)
+            self.llama_swap_path = data.get("llama_swap_path", self.llama_swap_path)
+            self.llama_swap_config = data.get("llama_swap_config", self.llama_swap_config)
+            self.favorites_path = data.get("favorites", self.favorites_path)
+            self.default_port_config_path = data.get("default_port_config", self.default_port_config_path)
+            raw = data.get("port", self.port)
+            try:
+                port = int(raw) if raw else self.port
+            except (ValueError, TypeError):
+                port = self.port
+        if self._validate_port(port):
+            self.port = port
+        else:
+            print(f"Warning: Invalid port in config, using default {self.port}")
+
+    def _ensure_file(self, path, template, label):
+        """Create a file from template if it doesn't exist."""
+        parent = os.path.dirname(path)
+        if parent and not os.path.exists(parent):
+            os.makedirs(parent, exist_ok=True)
+        if not os.path.exists(path):
+            with open(path, 'w') as f:
+                f.write(template)
+            print(f"Created default {label}: {path}")
+
+    def load(self, config_path):
         """Load configuration files.
+
+        Config paths (favorites, default_port_config) are read from config.yaml
+        itself, so all paths are configurable from a single file.
 
         Args:
             config_path: Path to config.yaml
-            favorites_path: Path to favorites.yaml
-            defaults_path: Path to include/default.yaml
         """
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r') as f:
-                    content = f.read()
-                if HAS_YAML:
-                    data = yaml.safe_load(content) or {}
-                    port = data.get("port", self.port)
-                    self.models_dir = data.get("models_dir", self.models_dir)
-                    self.llama_server_path = data.get("llama_server_path", self.llama_server_path)
-                    self.llama_swap_path = data.get("llama_swap_path", self.llama_swap_path)
-                    self.llama_swap_config = data.get("llama_swap_config", self.llama_swap_config)
-                else:
-                    fields = _parse_yaml_fields(content)
-                    port = int(fields.get("port", self.port)) if fields.get("port") else self.port
-                    self.models_dir = fields.get("models_dir", self.models_dir)
-                    self.llama_server_path = fields.get("llama_server_path", self.llama_server_path)
-                    self.llama_swap_path = fields.get("llama_swap_path", self.llama_swap_path)
-                    self.llama_swap_config = fields.get("llama_swap_config", self.llama_swap_config)
-                if self._validate_port(port):
-                    self.port = port
-                else:
-                    print(f"Warning: Invalid port in {config_path}, using default 8080")
-            except Exception as e:
-                print(f"Warning: Error reading {config_path}: {e}")
-                print(f"Warning: Using default port 8080")
+        data = self._read_config_yaml(config_path)
+        if data is not None:
+            self._apply_config_fields(data)
         else:
-            print(f"Warning: {config_path} not found, using default port 8080")
+            print(f"Warning: {config_path} not found, using defaults")
 
-        if os.path.exists(favorites_path):
+        self._ensure_file(self.favorites_path, FAVORITES_TEMPLATE, "favorites")
+        self._ensure_file(self.default_port_config_path, DEFAULT_YAML_TEMPLATE, "default port config")
+
+        if os.path.exists(self.favorites_path):
             try:
-                with open(favorites_path, 'r') as f:
+                with open(self.favorites_path, 'r') as f:
                     content = f.read()
                 if HAS_YAML:
                     data = yaml.safe_load(content) or {}
@@ -206,15 +226,15 @@ class Config:
                 else:
                     self.favorites = self._parse_favorites_manual(content)
             except Exception as e:
-                print(f"Warning: Error reading {favorites_path}: {e}")
+                print(f"Warning: Error reading {self.favorites_path}: {e}")
                 print(f"Warning: Using empty favorites")
                 self.favorites = {}
         else:
-            print(f"Info: {favorites_path} not found, using empty favorites")
+            print(f"Info: {self.favorites_path} not found, using empty favorites")
 
-        if os.path.exists(defaults_path):
+        if os.path.exists(self.default_port_config_path):
             try:
-                with open(defaults_path, 'r') as f:
+                with open(self.default_port_config_path, 'r') as f:
                     content = f.read()
                 if HAS_YAML:
                     data = yaml.safe_load(content) or {}
@@ -224,6 +244,6 @@ class Config:
                 if self._validate_port(port):
                     self.default_port = port
             except Exception as e:
-                print(f"Warning: Error reading {defaults_path}: {e}")
+                print(f"Warning: Error reading {self.default_port_config_path}: {e}")
         else:
-            print(f"Info: {defaults_path} not found, using default port {self.default_port}")
+            print(f"Info: {self.default_port_config_path} not found, using default port {self.default_port}")

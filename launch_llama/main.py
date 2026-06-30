@@ -31,10 +31,10 @@ def curses_app(stdscr, verbose=False):
         stdscr.addstr(0, 2, "Loading configuration...", curses.A_DIM)
         stdscr.refresh()
 
-    config.generate_defaults("config.yaml", "favorites.yaml", "include/default.yaml")
+    config.generate_defaults("config.yaml")
 
     cfg = config.Config()
-    cfg.load("config.yaml", "favorites.yaml", "include/default.yaml")
+    cfg.load("config.yaml")
 
     model_list = models.discover_models(cfg.models_dir)
 
