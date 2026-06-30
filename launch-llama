@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
+clear
 source /opt/intel/oneapi/setvars.sh --force
 exec python3 "$(dirname "$0")/launch_llama/main.py"
+clear
