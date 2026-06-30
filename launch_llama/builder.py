@@ -1,3 +1,10 @@
+def parse_agent_mode(val):
+    """Parse agent_mode from various types (bool, str, int) to bool."""
+    if isinstance(val, bool):
+        return val
+    return str(val).lower() in ('true', 'yes', '1')
+
+
 def build_llama_server_command(
     model_path,
     key_quant,
@@ -31,7 +38,7 @@ def build_llama_server_command(
         f"-c {context_size}",
         f"-ngl {gpu_layers}"
     ]
-    if agent_mode:
+    if parse_agent_mode(agent_mode):
         cmd.append("--agent")
     else:
         cmd.append("--no-agent")

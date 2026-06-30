@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,7 +14,7 @@ from launch_llama import prompts
 from launch_llama import runner
 
 
-def curses_app(stdscr):
+def curses_app(stdscr, verbose=False):
     stdscr.keypad(True)
 
     if curses.has_colors():
@@ -25,6 +26,12 @@ def curses_app(stdscr):
         curses.curs_set(0)
     except:
         pass
+
+    if verbose:
+        stdscr.addstr(0, 2, "Loading configuration...", curses.A_DIM)
+        stdscr.refresh()
+
+    config.generate_defaults("config.yaml", "favorites.yaml", "include/default.yaml")
 
     cfg = config.Config()
     cfg.load("config.yaml", "favorites.yaml", "include/default.yaml")
@@ -102,9 +109,43 @@ def curses_app(stdscr):
     return None
 
 
-def main():
+def confirm_run(cmd):
+    """Ask user to confirm before running the command."""
+    print("\n" + "=" * 60)
+    print("Command to execute:")
+    print("-" * 60)
+    print(cmd)
+    print("=" * 60)
     try:
-        result = wrapper(curses_app)
+        resp = input("\nRun this command? [Y/n]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    if resp in ("", "y", "yes"):
+        return True
+    return False
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='launch-llama',
+        description='Launch and manage llama-server instances'
+    )
+    parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Enable verbose/debug output'
+    )
+    parser.add_argument(
+        '--no-confirm', action='store_true',
+        help='Skip confirmation prompt before running command'
+    )
+    args, _ = parser.parse_known_args()
+
+    verbose = args.verbose
+    no_confirm = args.no_confirm
+
+    try:
+        result = wrapper(lambda stdscr: curses_app(stdscr, verbose=verbose))
     except KeyboardInterrupt:
         return 130
 
@@ -115,28 +156,37 @@ def main():
 
     if action == "llama-server":
         cmd = builder.build_llama_server_command(**data)
+        if not no_confirm and not confirm_run(cmd):
+            print("Cancelled.")
+            return 0
         print(f"\n{cmd}\n")
-        return runner.Runner().run(cmd)
+        return runner.Runner(verbose=verbose).run(cmd)
 
     if action == "favorite":
         fav = data
         model_path = fav.get("model", "")
         cmd = builder.build_llama_server_command(
             model_path=model_path,
-            key_quant=fav.get("key_quant", "q8_0"),
-            value_quant=fav.get("value_quant", "q8_0"),
+            key_quant=str(fav.get("key_quant", "q8_0")),
+            value_quant=str(fav.get("value_quant", "q8_0")),
             port=int(fav.get("port", 8080)),
             context_size=int(fav.get("context_size", 4096)),
             gpu_layers=int(fav.get("gpu_layers", 20)),
-            agent_mode=fav.get("agent_mode", "").lower() == "true",
+            agent_mode=fav.get("agent_mode", False),
         )
+        if not no_confirm and not confirm_run(cmd):
+            print("Cancelled.")
+            return 0
         print(f"\n{cmd}\n")
-        return runner.Runner().run(cmd)
+        return runner.Runner(verbose=verbose).run(cmd)
 
     if action == "llama-swap":
         cmd = builder.build_llama_swap_command(data)
+        if not no_confirm and not confirm_run(cmd):
+            print("Cancelled.")
+            return 0
         print(f"\n{cmd}\n")
-        return runner.Runner().run(cmd)
+        return runner.Runner(verbose=verbose).run(cmd)
 
     return 1
 
