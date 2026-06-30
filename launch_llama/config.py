@@ -57,18 +57,54 @@ def check_command_exists(name):
     return False
 
 
+def _parse_yaml_fields(content):
+    """Parse simple 'key: value' lines from a YAML string into a dict."""
+    fields = {}
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if ':' in stripped and not stripped.startswith('#'):
+            key, _, value = stripped.partition(':')
+            fields[key.strip()] = value.strip()
+    return fields
+
+
+def _ensure_fields(filepath, template):
+    """Add any missing key-value fields from template to an existing file."""
+    if not os.path.exists(filepath):
+        return False
+    with open(filepath, 'r') as f:
+        existing = f.read()
+    existing_fields = _parse_yaml_fields(existing)
+    default_fields = _parse_yaml_fields(template)
+    missing = {k: v for k, v in default_fields.items() if k not in existing_fields}
+    if not missing:
+        return False
+    with open(filepath, 'a') as f:
+        f.write('\n')
+        for key, value in missing.items():
+            f.write(f'{key}: {value}\n')
+    return True
+
+
 def generate_defaults(config_path, favorites_path, defaults_path):
-    """Generate default configuration files if they don't exist."""
+    """Generate default configuration files if they don't exist,
+    and add any missing default fields to existing files."""
     defaults_dir = os.path.dirname(defaults_path)
     generated = []
 
-    if not os.path.exists(config_path):
+    if os.path.exists(config_path):
+        if _ensure_fields(config_path, CONFIG_TEMPLATE):
+            generated.append(config_path)
+            print(f"Added missing fields to config: {config_path}")
+    else:
         with open(config_path, 'w') as f:
             f.write(CONFIG_TEMPLATE)
         generated.append(config_path)
         print(f"Created default config: {config_path}")
 
-    if not os.path.exists(favorites_path):
+    if os.path.exists(favorites_path):
+        pass  # Don't auto-modify user's favorites
+    else:
         with open(favorites_path, 'w') as f:
             f.write(FAVORITES_TEMPLATE)
         generated.append(favorites_path)
@@ -144,7 +180,12 @@ class Config:
                     self.llama_swap_path = data.get("llama_swap_path", self.llama_swap_path)
                     self.llama_swap_config = data.get("llama_swap_config", self.llama_swap_config)
                 else:
-                    port = self._parse_port_yaml(content) or self.port
+                    fields = _parse_yaml_fields(content)
+                    port = int(fields.get("port", self.port)) if fields.get("port") else self.port
+                    self.models_dir = fields.get("models_dir", self.models_dir)
+                    self.llama_server_path = fields.get("llama_server_path", self.llama_server_path)
+                    self.llama_swap_path = fields.get("llama_swap_path", self.llama_swap_path)
+                    self.llama_swap_config = fields.get("llama_swap_config", self.llama_swap_config)
                 if self._validate_port(port):
                     self.port = port
                 else:
