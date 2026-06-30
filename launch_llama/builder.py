@@ -13,7 +13,7 @@ def build_llama_server_command(
     context_size,
     gpu_layers,
     agent_mode,
-    llama_server_path="llama-server"
+    llama_server_path
 ):
     """Build llama-server command string.
     
@@ -46,7 +46,7 @@ def build_llama_server_command(
         cmd.append("--no-agent")
     return " ".join(cmd)
 
-def build_llama_swap_command(port, llama_swap_path="llama-swap", llama_swap_config="include/llama-swap-config.yaml"):
+def build_llama_swap_command(port, llama_swap_path, llama_swap_config):
     """Build llama-swap command string.
     
     Args:

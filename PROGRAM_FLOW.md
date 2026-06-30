@@ -130,7 +130,7 @@ launch-llama [command] [args]
 ### llama-swap Flow (arg: run llama-swap)
 
 1. Get port (or use default)
-2. Build command: `llama-swap -config include/llama-swap-config.yaml -listen localhost:<port>`
+2. Build command: `llama-swap -config config/llama-swap-config.yaml -listen localhost:<port>`
 3. Print and run
 
 ## Command Formats
@@ -144,7 +144,7 @@ llama-server --model <path> -ctk <key> -ctv <value> -fa on --port <port> -c <ctx
 ### llama-swap
 
 ```
-llama-swap -config include/llama-swap-config.yaml -listen localhost:<port>
+llama-swap -config config/llama-swap-config.yaml -listen localhost:<port>
 ```
 
 ## Error Handling

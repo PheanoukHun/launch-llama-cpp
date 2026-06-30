@@ -29,7 +29,7 @@ port: 8080                          # default port for llama-server
 models_dir: models                  # path to model files directory
 llama_server_path: llama-server     # path to llama-server binary
 llama_swap_path: llama-swap         # path to llama-swap binary
-llama_swap_config: include/llama-swap-config.yaml  # llama-swap config path
+llama_swap_config: config/llama-swap-config.yaml  # llama-swap config path
 ```
 
 Missing fields are auto-appended on first run.
@@ -82,10 +82,11 @@ my-model:
 ```
 launch-llama/
 ├── config.yaml                       # global config
-├── favorites.yaml                    # saved presets
+├── config/                           # sub-configs (default, favorites, llama-swap)
 ├── models/                           # model files (ignored by git)
-├── include/
+├── config/
 │   ├── default.yaml                  # llama-swap port default
+│   ├── favorites.yaml                # saved presets
 │   └── llama-swap-config.yaml        # llama-swap binary config
 ├── launch_llama/
 │   ├── __init__.py

@@ -12,9 +12,9 @@ CONFIG_TEMPLATE = """port: 8080
 models_dir: models
 llama_server_path: llama-server
 llama_swap_path: llama-swap
-llama_swap_config: include/llama-swap-config.yaml
-favorites: favorites.yaml
-default_port_config: include/default.yaml
+llama_swap_config: config/llama-swap-config.yaml
+favorites: config/favorites.yaml
+default_port_config: config/default.yaml
 """
 
 FAVORITES_TEMPLATE = """# Favorites for launch-llama
@@ -114,9 +114,10 @@ class Config:
         self.models_dir = "models"
         self.llama_server_path = "llama-server"
         self.llama_swap_path = "llama-swap"
-        self.llama_swap_config = "include/llama-swap-config.yaml"
-        self.favorites_path = "favorites.yaml"
-        self.default_port_config_path = "include/default.yaml"
+        self.llama_swap_config = "config/llama-swap-config.yaml"
+        self.favorites_path = "config/favorites.yaml"
+        self.default_port_config_path = "config/default.yaml"
+        self._base_dir = None
 
     def _validate_port(self, port):
         if not isinstance(port, int):
@@ -198,6 +199,12 @@ class Config:
                 f.write(template)
             print(f"Created default {label}: {path}")
 
+    def _resolve_path(self, path):
+        """Resolve a relative path against the config base directory."""
+        if self._base_dir and not os.path.isabs(path):
+            return os.path.join(self._base_dir, path)
+        return path
+
     def load(self, config_path):
         """Load configuration files.
 
@@ -207,11 +214,19 @@ class Config:
         Args:
             config_path: Path to config.yaml
         """
+        config_path = os.path.abspath(config_path)
+        self._base_dir = os.path.dirname(config_path)
+
         data = self._read_config_yaml(config_path)
         if data is not None:
             self._apply_config_fields(data)
         else:
             print(f"Warning: {config_path} not found, using defaults")
+
+        self.models_dir = self._resolve_path(self.models_dir)
+        self.favorites_path = self._resolve_path(self.favorites_path)
+        self.default_port_config_path = self._resolve_path(self.default_port_config_path)
+        self.llama_swap_config = self._resolve_path(self.llama_swap_config)
 
         self._ensure_file(self.favorites_path, FAVORITES_TEMPLATE, "favorites")
         self._ensure_file(self.default_port_config_path, DEFAULT_YAML_TEMPLATE, "default port config")

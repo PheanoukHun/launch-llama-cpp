@@ -31,10 +31,13 @@ def curses_app(stdscr, verbose=False):
         stdscr.addstr(0, 2, "Loading configuration...", curses.A_DIM)
         stdscr.refresh()
 
-    config.generate_defaults("config.yaml")
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(script_dir, "config.yaml")
+
+    config.generate_defaults(config_path)
 
     cfg = config.Config()
-    cfg.load("config.yaml")
+    cfg.load(config_path)
 
     model_list = models.discover_models(cfg.models_dir)
 
@@ -172,7 +175,7 @@ def main():
         fav = data
         model_path = fav.get("model", "")
         cmd = builder.build_llama_server_command(
-            llama_server_path=fav.get("llama_server_path", "llama-server"),
+            llama_server_path=fav["llama_server_path"],
             model_path=model_path,
             key_quant=str(fav.get("key_quant", "q8_0")),
             value_quant=str(fav.get("value_quant", "q8_0")),
