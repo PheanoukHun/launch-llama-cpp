@@ -1,7 +1,0 @@
-port: 8080
-models_dir: /home/procastoh/AI/LLM-Models/LLM/
-llama_server_path: llama-server
-llama_swap_path: llama-swap
-llama_swap_config: config/llama-swap-config.yaml
-favorites: config/favorites.yaml
-default_port_config: config/default.yaml
