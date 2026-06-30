@@ -1,0 +1,4 @@
+# Default configuration for llama-swap
+# This is used when llama-swap mode is selected
+
+port: 8081

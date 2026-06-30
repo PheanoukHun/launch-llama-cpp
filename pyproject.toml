@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "launch-llama"
+version = "0.1.0"
+description = "Launch and manage llama server instances"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "questionary>=2.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+launch-llama = "launch_llama.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["launch_llama*"]

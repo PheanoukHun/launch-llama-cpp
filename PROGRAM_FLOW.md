@@ -1,132 +1,161 @@
-The program acts as a launcher for different `llama.cpp`-related binaries. Depending on the command-line arguments, it either walks the user through an interactive setup or immediately launches the requested binary with a configuration file.
+# Program Flow
 
-### 1. Program starts
+## Entry Point
 
-The user runs the `launch-llama` executable.
-
-There are three possible entry points:
-
-* `launch-llama`
-* `launch-llama --bin llama-server`
-* `launch-llama --bin llama-swap`
-
-There are also configuration-based shortcuts:
-
-* `launch-llama --bin llama-server --config some-config.yaml`
-* `launch-llama --bin llama-swap --config some-other-config.yaml`
-
----
-
-### 2. Running without `--bin`
-
-If the user simply runs:
-
-```bash
-launch-llama
+```
+launch-llama [command] [args]
 ```
 
-the program displays a launch menu containing available binaries:
+## Flow Diagram
 
-1. `llama-server`
-2. `llama-swap`
-3. Any additional favorites defined in `favorites.yaml`
-
-The user then chooses which binary to launch.
-
----
-
-### 3. If `llama-server` is selected
-
-The launcher starts an interactive configuration wizard.
-
-It asks the user, in order:
-
-1. Which model to load.
-2. What context size to use.
-3. Which KV cache key quantization format (`-ctk`) to use.
-4. Which KV cache value quantization format (`-ctv`) to use.
-5. How many layers should be offloaded to the GPU.
-6. Whether Agent mode should be enabled (`--agent`) or disabled (`--no-agent`).
-
-After collecting all of these options, the launcher constructs a command similar to:
-
-```bash
-llama-server \
-  --model <model> \
-  -ctk <key_quant> \
-  -ctv <value_quant> \
-  -fa on \
-  --port 8080 \
-  -c <context_size> \
-  [--agent | --no-agent]
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         MAIN                                    │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Load config.yaml → port                                     │
+│  2. Load favorites.yaml → favorites list                        │
+│  3. Discover models/ → model list                               │
+│  4. Parse CLI args                                              │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+        ▼                   ▼                   ▼
+  ┌───────────┐      ┌─────────────┐    ┌──────────────┐
+  │Interactive│      │ Favorites   │    │ llama-swap   │
+  │   Menu    │      │    Flow     │    │   Flow       │
+  └─────┬─────┘      └─────────────┘    └──────────────┘
+        │                   │                   │
+        │                   │                   │
+        ▼                   ▼                   ▼
+  ┌───────────┐      ┌─────────────┐    ┌──────────────┐
+  │Select     │      │Load from    │    │Build         │
+  │llama-     │      │favorites    │    │llama-swap    │
+  │server     │      │yaml         │    │command       │
+  └─────┬─────┘      └──────┬──────┘    └──────────────┘
+        │                   │ 
+        ▼                   ▼
+  ┌───────────┐      ┌─────────────┐
+  │Select     │      │Build        │
+  │model      │      │command      │
+  └─────┬─────┘      └─────────────┘
+        │
+        ▼
+  ┌───────────┐
+  │Context    │
+  │size       │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Quant      │
+  │key        │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Quant      │
+  │value      │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │GPU        │
+  │layers     │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Agent      │
+  │mode       │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Build      │
+  │command    │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Print      │
+  │command    │
+  └─────┬─────┘
+        │
+        ▼
+  ┌───────────┐
+  │Run        │
+  │command    │
+  └───────────┘
 ```
 
-The completed command is then executed.
+## Detailed Steps
 
----
+### Interactive Mode (no args)
 
-### 4. If `llama-swap` is selected
+1. Show menu with options:
+   - `llama-server` → go to model selection
+   - `favorite_1` → load from favorites
+   - `favorite_2` → load from favorites
+   - `llama-swap` → go to llama-swap flow
 
-Instead of asking additional questions, the launcher immediately builds the command:
+2. If `llama-server` selected:
+   - Display model list from `models/`
+   - User selects model → store path
+   - Prompt context size (default: 4096)
+   - Prompt key quantization (default: q8_0)
+   - Prompt value quantization (default: q8_0)
+   - Prompt GPU layers (default: 20, range 0-40)
+   - Prompt agent mode (yes/no)
+   - Build and run command
 
-```bash
-llama-swap \
-  -config llama-swap-config.yaml \
-  -listen localhost:9000
+3. If favorite selected:
+   - Load all values from favorites.yaml
+   - Build and run command
+   - (No prompting)
+
+4. If `llama-swap` selected:
+   - Get port (or use default from config)
+   - Build llama-swap command
+   - Print and run
+
+### Favorites Flow (arg: run <name>)
+
+1. Look up name in favorites.yaml
+2. If not found → error
+3. Extract all values
+4. Build command
+5. Print and run
+
+### llama-swap Flow (arg: run llama-swap)
+
+1. Get port (or use default)
+2. Build command: `llama-swap -config include/llama-swap-config.yaml -listen localhost:<port>`
+3. Print and run
+
+## Command Formats
+
+### llama-server
+
+```
+llama-server --model <path> -ctk <key> -ctv <value> -fa on --port <port> -c <ctx> -ngl <layers> [--agent|--no-agent]
 ```
 
-It then runs the command.
+### llama-swap
 
----
-
-### 5. Using `--bin`
-
-If the user specifies a binary on the command line, the initial selection menu is skipped.
-
-For example:
-
-```bash
-launch-llama --bin llama-server
+```
+llama-swap -config include/llama-swap-config.yaml -listen localhost:<port>
 ```
 
-starts directly at the interactive `llama-server` configuration wizard.
+## Error Handling
 
-Likewise,
+- Missing config.yaml → create default
+- Missing favorites.yaml → treat as empty
+- Missing models/ → error
+- Invalid port → warning, use default
+- Invalid YAML → clear error
+- Command not found → error
 
-```bash
-launch-llama --bin llama-swap
-```
+## Signals
 
-immediately constructs and runs the `llama-swap` command.
-
----
-
-### 6. Using `--config`
-
-If a configuration file is also provided, the launcher skips the interactive prompts entirely.
-
-For example,
-
-```bash
-launch-llama --bin llama-server --config some-config.yaml
-```
-
-loads the settings from `some-config.yaml`, builds the `llama-server` command automatically, and executes it.
-
-Similarly,
-
-```bash
-launch-llama --bin llama-swap --config some-other-config.yaml
-```
-
-uses the supplied configuration file to launch `llama-swap` without any user interaction.
-
----
-
-### Overall flow
-
-In summary, the launcher follows one of three paths:
-
-* **No arguments:** Show a binary selection screen, then either run the interactive `llama-server` setup or launch `llama-swap`.
-* **`--bin` specified:** Skip the selection screen and go directly to the chosen binary.
-* **`--bin` + `--config`:** Skip all interactive prompts, load settings from the configuration file, construct the appropriate command, and execute it immediately.
+- `SIGINT` (Ctrl+C) → terminate child, exit with 130

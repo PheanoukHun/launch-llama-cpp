@@ -1,0 +1,20 @@
+# Favorites for launch-llama
+# Each entry contains: model path, key quant, value quant, port, context size, GPU layers, agent mode
+
+default:
+  model: models/Qwen2.5-1.5B-Instruct-Q4_0.gguf
+  key_quant: q4_0
+  value_quant: q4_0
+  port: 8080
+  context_size: 2048
+  gpu_layers: 16
+  agent_mode: false
+
+chatbot:
+  model: models/Mistral-7B-Instruct-v0.3-Q8_0.gguf
+  key_quant: q8_0
+  value_quant: q8_0
+  port: 8081
+  context_size: 8192
+  gpu_layers: 32
+  agent_mode: true

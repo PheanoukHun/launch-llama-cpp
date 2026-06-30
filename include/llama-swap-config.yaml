@@ -1,0 +1,11 @@
+# llama-swap configuration
+# This config is loaded when llama-swap mode is used
+
+llama-swap:
+  host: localhost
+  port: 8081
+  model: models/Qwen2.5-1.5B-Instruct-Q4_0.gguf
+  context_size: 2048
+  gpu_layers: 16
+  quantization: q4_0
+  agent_mode: false

@@ -1,0 +1,4 @@
+# No third-party dependencies - all imports are Python stdlib.
+# curses is included with Python on Linux/macOS.
+# On Windows, install windows-curses:
+#   pip install windows-curses
