@@ -36,13 +36,12 @@ def curses_app(stdscr, verbose=False):
     cfg = config.Config()
     cfg.load("config.yaml", "favorites.yaml", "include/default.yaml")
 
-    models_dir = "models"
-    model_list = models.discover_models(models_dir)
+    model_list = models.discover_models(cfg.models_dir)
 
     if not model_list:
         stdscr.clear()
         stdscr.addstr(0, 2, "No Models Found", curses.A_BOLD)
-        stdscr.addstr(2, 2, "Add model files to the models/ directory")
+        stdscr.addstr(2, 2, f"Add model files to {cfg.models_dir}/")
         stdscr.addstr(3, 2, "Supported: .gguf .bin .safetensors .ggml .onnx")
         stdscr.addstr(5, 2, "Press any key to exit")
         stdscr.refresh()
@@ -62,10 +61,10 @@ def curses_app(stdscr, verbose=False):
         selected = prompts.selection(stdscr, "Select Model", model_list, default_idx=0)
         if selected is None:
             return None
-        model_path = os.path.join(models_dir, selected)
+        model_path = os.path.join(cfg.models_dir, selected)
 
         ctx_size = prompts.integer(
-            stdscr, "Context Size", min_val=1, max_val=65535, default=4096
+            stdscr, "Context Size", min_val=1, max_val=1048576, default=4096
         )
         if ctx_size is None:
             return None
@@ -90,6 +89,7 @@ def curses_app(stdscr, verbose=False):
             return None
 
         return ("llama-server", {
+            "llama_server_path": cfg.llama_server_path,
             "model_path": model_path,
             "key_quant": key_quant,
             "value_quant": value_quant,
@@ -101,10 +101,16 @@ def curses_app(stdscr, verbose=False):
 
     if choice.startswith("favorite: "):
         fav_name = choice[len("favorite: ") :]
-        return ("favorite", cfg.favorites[fav_name])
+        fav_data = dict(cfg.favorites[fav_name])
+        fav_data.setdefault("llama_server_path", cfg.llama_server_path)
+        return ("favorite", fav_data)
 
     if choice == "llama-swap":
-        return ("llama-swap", cfg.default_port)
+        return ("llama-swap", {
+            "port": cfg.default_port,
+            "llama_swap_path": cfg.llama_swap_path,
+            "llama_swap_config": cfg.llama_swap_config,
+        })
 
     return None
 
@@ -166,6 +172,7 @@ def main():
         fav = data
         model_path = fav.get("model", "")
         cmd = builder.build_llama_server_command(
+            llama_server_path=fav.get("llama_server_path", "llama-server"),
             model_path=model_path,
             key_quant=str(fav.get("key_quant", "q8_0")),
             value_quant=str(fav.get("value_quant", "q8_0")),
@@ -181,7 +188,7 @@ def main():
         return runner.Runner(verbose=verbose).run(cmd)
 
     if action == "llama-swap":
-        cmd = builder.build_llama_swap_command(data)
+        cmd = builder.build_llama_swap_command(**data)
         if not no_confirm and not confirm_run(cmd):
             print("Cancelled.")
             return 0

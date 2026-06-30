@@ -9,6 +9,10 @@ except ImportError:
     HAS_YAML = False
 
 CONFIG_TEMPLATE = """port: 8080
+models_dir: models
+llama_server_path: llama-server
+llama_swap_path: llama-swap
+llama_swap_config: include/llama-swap-config.yaml
 """
 
 FAVORITES_TEMPLATE = """# Favorites for launch-llama
@@ -87,6 +91,10 @@ class Config:
         self.port = 8080
         self.favorites = {}
         self.default_port = 8081
+        self.models_dir = "models"
+        self.llama_server_path = "llama-server"
+        self.llama_swap_path = "llama-swap"
+        self.llama_swap_config = "include/llama-swap-config.yaml"
 
     def _validate_port(self, port):
         if not isinstance(port, int):
@@ -131,6 +139,10 @@ class Config:
                 if HAS_YAML:
                     data = yaml.safe_load(content) or {}
                     port = data.get("port", self.port)
+                    self.models_dir = data.get("models_dir", self.models_dir)
+                    self.llama_server_path = data.get("llama_server_path", self.llama_server_path)
+                    self.llama_swap_path = data.get("llama_swap_path", self.llama_swap_path)
+                    self.llama_swap_config = data.get("llama_swap_config", self.llama_swap_config)
                 else:
                     port = self._parse_port_yaml(content) or self.port
                 if self._validate_port(port):

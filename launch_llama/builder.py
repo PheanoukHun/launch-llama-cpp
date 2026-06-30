@@ -12,7 +12,8 @@ def build_llama_server_command(
     port,
     context_size,
     gpu_layers,
-    agent_mode
+    agent_mode,
+    llama_server_path="llama-server"
 ):
     """Build llama-server command string.
     
@@ -24,12 +25,13 @@ def build_llama_server_command(
         context_size: Context window size
         gpu_layers: Number of GPU layers
         agent_mode: True for --agent, False for --no-agent
+        llama_server_path: Path to llama-server binary
         
     Returns:
         Formatted command string
     """
     cmd = [
-        "llama-server",
+        llama_server_path,
         f"--model {model_path}",
         f"-ctk {key_quant}",
         f"-ctv {value_quant}",
@@ -44,13 +46,15 @@ def build_llama_server_command(
         cmd.append("--no-agent")
     return " ".join(cmd)
 
-def build_llama_swap_command(port):
+def build_llama_swap_command(port, llama_swap_path="llama-swap", llama_swap_config="include/llama-swap-config.yaml"):
     """Build llama-swap command string.
     
     Args:
         port: Port number to listen on
+        llama_swap_path: Path to llama-swap binary
+        llama_swap_config: Path to llama-swap config file
         
     Returns:
         Formatted command string
     """
-    return f"llama-swap -config include/llama-swap-config.yaml -listen localhost:{port}"
+    return f"{llama_swap_path} -config {llama_swap_config} -listen localhost:{port}"
