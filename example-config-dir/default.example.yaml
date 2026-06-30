@@ -1,0 +1,4 @@
+# Example default port config for llama-swap
+# Copy this to default.yaml
+
+port: 8081

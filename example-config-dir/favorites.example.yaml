@@ -1,0 +1,22 @@
+# Example favorites config for launch-llama
+# Copy this to favorites.yaml and customize with your models
+
+# Fields: model, key_quant, value_quant, port, context_size, gpu_layers, agent_mode
+
+example-model:
+  model: models/Example-Model-Q4_K_M.gguf
+  key_quant: q4_0
+  value_quant: q4_0
+  port: 8080
+  context_size: 8192
+  gpu_layers: 32
+  agent_mode: false
+
+chat:
+  model: models/Chat-Model-Q8_0.gguf
+  key_quant: q8_0
+  value_quant: q8_0
+  port: 8081
+  context_size: 4096
+  gpu_layers: 24
+  agent_mode: true
