@@ -1,17 +1,13 @@
+import argparse
 import os
 import sys
-import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from curses import wrapper, has_colors, init_pair, curs_set
 import curses
+from curses import curs_set, has_colors, init_pair, wrapper
 
-from launch_llama import builder
-from launch_llama import config
-from launch_llama import models
-from launch_llama import prompts
-from launch_llama import runner
+from launch_llama import builder, config, models, prompts, runner
 
 
 def curses_app(stdscr, verbose=False):
@@ -72,12 +68,24 @@ def curses_app(stdscr, verbose=False):
         if ctx_size is None:
             return None
 
-        quants = ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"]
+        quants = [
+            "f32",
+            "f16",
+            "bf16",
+            "q8_0",
+            "q4_0",
+            "q4_1",
+            "iq4_nl",
+            "q5_0",
+            "q5_1",
+        ]
         key_quant = prompts.selection(stdscr, "Key Quantization", quants, default_idx=3)
         if key_quant is None:
             return None
 
-        value_quant = prompts.selection(stdscr, "Value Quantization", quants, default_idx=3)
+        value_quant = prompts.selection(
+            stdscr, "Value Quantization", quants, default_idx=3
+        )
         if value_quant is None:
             return None
 
@@ -91,16 +99,19 @@ def curses_app(stdscr, verbose=False):
         if agent_mode is None:
             return None
 
-        return ("llama-server", {
-            "llama_server_path": cfg.llama_server_path,
-            "model_path": model_path,
-            "key_quant": key_quant,
-            "value_quant": value_quant,
-            "port": cfg.port,
-            "context_size": ctx_size,
-            "gpu_layers": gpu_layers,
-            "agent_mode": agent_mode,
-        })
+        return (
+            "llama-server",
+            {
+                "llama_server_path": cfg.llama_server_path,
+                "model_path": model_path,
+                "key_quant": key_quant,
+                "value_quant": value_quant,
+                "port": cfg.port,
+                "context_size": ctx_size,
+                "gpu_layers": gpu_layers,
+                "agent_mode": agent_mode,
+            },
+        )
 
     if choice.startswith("favorite: "):
         fav_name = choice[len("favorite: ") :]
@@ -109,11 +120,14 @@ def curses_app(stdscr, verbose=False):
         return ("favorite", fav_data)
 
     if choice == "llama-swap":
-        return ("llama-swap", {
-            "port": cfg.default_port,
-            "llama_swap_path": cfg.llama_swap_path,
-            "llama_swap_config": cfg.llama_swap_config,
-        })
+        return (
+            "llama-swap",
+            {
+                "port": cfg.default_port,
+                "llama_swap_path": cfg.llama_swap_path,
+                "llama_swap_config": cfg.llama_swap_config,
+            },
+        )
 
     return None
 
@@ -137,16 +151,15 @@ def confirm_run(cmd):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog='launch-llama',
-        description='Launch and manage llama-server instances'
+        prog="launch-llama", description="Launch and manage llama-server instances"
     )
     parser.add_argument(
-        '--verbose', '-v', action='store_true',
-        help='Enable verbose/debug output'
+        "--verbose", "-v", action="store_true", help="Enable verbose/debug output"
     )
     parser.add_argument(
-        '--no-confirm', action='store_true',
-        help='Skip confirmation prompt before running command'
+        "--no-confirm",
+        action="store_true",
+        help="Skip confirmation prompt before running command",
     )
     args, _ = parser.parse_known_args()
 

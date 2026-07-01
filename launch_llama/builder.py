@@ -2,7 +2,7 @@ def parse_agent_mode(val):
     """Parse agent_mode from various types (bool, str, int) to bool."""
     if isinstance(val, bool):
         return val
-    return str(val).lower() in ('true', 'yes', '1')
+    return str(val).lower() in ("true", "yes", "1")
 
 
 def build_llama_server_command(
@@ -13,10 +13,10 @@ def build_llama_server_command(
     context_size,
     gpu_layers,
     agent_mode,
-    llama_server_path
+    llama_server_path,
 ):
     """Build llama-server command string.
-    
+
     Args:
         model_path: Path to model file
         key_quant: Key quantization type
@@ -26,7 +26,7 @@ def build_llama_server_command(
         gpu_layers: Number of GPU layers
         agent_mode: True for --agent, False for --no-agent
         llama_server_path: Path to llama-server binary
-        
+
     Returns:
         Formatted command string
     """
@@ -38,7 +38,8 @@ def build_llama_server_command(
         "-fa on",
         f"--port {port}",
         f"-c {context_size}",
-        f"-ngl {gpu_layers}"
+        f"-ngl {gpu_layers}",
+        "--jinja",
     ]
     if parse_agent_mode(agent_mode):
         cmd.append("--agent")
@@ -46,14 +47,15 @@ def build_llama_server_command(
         cmd.append("--no-agent")
     return " ".join(cmd)
 
+
 def build_llama_swap_command(port, llama_swap_path, llama_swap_config):
     """Build llama-swap command string.
-    
+
     Args:
         port: Port number to listen on
         llama_swap_path: Path to llama-swap binary
         llama_swap_config: Path to llama-swap config file
-        
+
     Returns:
         Formatted command string
     """
