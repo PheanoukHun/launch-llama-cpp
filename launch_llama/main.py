@@ -193,7 +193,7 @@ def main():
             key_quant=str(fav.get("key_quant", "q8_0")),
             value_quant=str(fav.get("value_quant", "q8_0")),
             port=int(fav.get("port", 8080)),
-            context_size=int(fav.get("context_size", 4096)),
+            context_size=int(fav.get("context_size", fav.get("context", 4096))),
             gpu_layers=int(fav.get("gpu_layers", 20)),
             agent_mode=fav.get("agent_mode", False),
         )
